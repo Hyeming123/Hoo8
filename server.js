@@ -1,4 +1,3 @@
-server.js
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const { createServer } = require('http');
