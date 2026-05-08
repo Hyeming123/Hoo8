@@ -11,6 +11,21 @@ const wss = new WebSocketServer({ server });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const express = require('express');
+const helmet = require('helmet');
+
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            "default-src": ["'self'"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com"],
+            "script-src": ["'self'", "'unsafe-inline'"],
+            // 필요한 다른 소스들도 추가
+        },
+    })
+);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Room Management ---
