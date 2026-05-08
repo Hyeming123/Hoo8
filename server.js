@@ -12,6 +12,7 @@ const wss = new WebSocketServer({ server });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+<<<<<<< HEAD
 // --- Middleware ---
 app.use(helmet.contentSecurityPolicy({
     directives: {
@@ -22,6 +23,23 @@ app.use(helmet.contentSecurityPolicy({
         "connect-src": ["'self'", "ws:", "wss:"]
     },
 }));
+=======
+const express = require('express');
+const helmet = require('helmet');
+
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            "default-src": ["'self'"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com"],
+            "script-src": ["'self'", "'unsafe-inline'"],
+            // 필요한 다른 소스들도 추가
+        },
+    })
+);
+
+>>>>>>> 98d3efc169b8eecfa2cdb383f323b28b1ee4aaee
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Room Management ---
