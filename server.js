@@ -16,9 +16,10 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.use(helmet.contentSecurityPolicy({
     directives: {
         "default-src": ["'self'"],
-        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://www.gstatic.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com", "https://www.gstatic.com"],
         "script-src": ["'self'", "'unsafe-inline'"],
+        "script-src-attr": ["'unsafe-inline'"],  // ✅ inline onclick 등 허용
         "connect-src": ["'self'", "ws:", "wss:"]
     },
 }));
@@ -136,7 +137,6 @@ wss.on('connection', (ws) => {
                 const room = rooms.get(ws.roomId);
                 if (!room || ws.playerIndex !== 0) break;
 
-                // 부족한 인원 봇으로 채우기
                 const humanCount = room.teams.length;
                 const botCount = TOTAL_TEAMS - humanCount;
 
@@ -145,7 +145,7 @@ wss.on('connection', (ws) => {
                     room.teams.push({
                         name: botName,
                         coachName: "AI Coach",
-                        roster: generateRoster(80 + Math.random() * 4), // 봇은 약간의 전력 차이를 둠
+                        roster: generateRoster(80 + Math.random() * 4),
                         money: 1500, fatigue: 0, w: 0, l: 0, isBot: true
                     });
                 }
@@ -168,12 +168,10 @@ wss.on('connection', (ws) => {
                 room.actions[ws.playerIndex] = msg.actions;
                 sendTo(ws, { type: 'ACTION_RECEIVED' });
 
-                // 현재 접속 중인 모든 '인간' 플레이어가 제출했는지 확인
                 const humanIndices = room.teams.map((t, i) => t.isBot ? null : i).filter(i => i !== null);
                 const allHumansSubmitted = humanIndices.every(idx => room.actions[idx]);
 
                 if (allHumansSubmitted) {
-                    // 1. 인간 플레이어 행동 적용
                     humanIndices.forEach(idx => {
                         const team = room.teams[idx];
                         const acts = room.actions[idx];
@@ -185,10 +183,8 @@ wss.on('connection', (ws) => {
                         });
                     });
 
-                    // 2. 봇 플레이어 자동 행동 (간단한 로직)
-                    room.teams.forEach((team, idx) => {
+                    room.teams.forEach((team) => {
                         if (team.isBot) {
-                            // 봇은 무작위로 훈련이나 스크림 진행
                             if (Math.random() > 0.5) team.roster[Math.floor(Math.random() * 5)].ovr += 1;
                         }
                     });
@@ -196,7 +192,6 @@ wss.on('connection', (ws) => {
                     room.actions = [];
                     const currentWeekMatches = room.schedule[room.week - 1];
 
-                    // 3. 경기 시뮬레이션
                     for (const match of currentWeekMatches) {
                         const [hIdx, aIdx] = match;
                         const home = room.teams[hIdx];
@@ -239,7 +234,6 @@ wss.on('connection', (ws) => {
         if (ws.roomId) {
             const room = rooms.get(ws.roomId);
             if (room) {
-                // 한 명이라도 남아있으면 유지, 모두 나가면 삭제
                 const stillConnected = room.players.some(p => p.readyState === 1);
                 if (!stillConnected) rooms.delete(ws.roomId);
             }
