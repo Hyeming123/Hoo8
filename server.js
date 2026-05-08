@@ -4,6 +4,7 @@ const { createServer } = require('http');
 const Anthropic = require('@anthropic-ai/sdk');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const helmet = require('helmet');
 
 const app = express();
 const server = createServer(app);
@@ -11,6 +12,16 @@ const wss = new WebSocketServer({ server });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// --- Middleware ---
+app.use(helmet.contentSecurityPolicy({
+    directives: {
+        "default-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "connect-src": ["'self'", "ws:", "wss:"]
+    },
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Room Management ---
@@ -30,7 +41,7 @@ function sendTo(ws, data) {
 async function getClaudeCommentary(matchContext) {
     try {
         const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-3-5-sonnet-20240620', // 최신 모델명으로 업데이트 권장
             max_tokens: 300,
             messages: [{
                 role: 'user',
@@ -44,6 +55,7 @@ async function getClaudeCommentary(matchContext) {
         });
         return response.content[0].text;
     } catch (e) {
+        console.error('Claude Commentary Error:', e);
         return null;
     }
 }
@@ -51,7 +63,7 @@ async function getClaudeCommentary(matchContext) {
 async function getMatchSummary(matchContext) {
     try {
         const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-3-5-sonnet-20240620',
             max_tokens: 200,
             messages: [{
                 role: 'user',
@@ -63,6 +75,7 @@ ${matchContext.winner} 가 ${matchContext.loser}를 ${matchContext.score}로 꺾
         });
         return response.content[0].text;
     } catch (e) {
+        console.error('Claude Summary Error:', e);
         return null;
     }
 }
@@ -70,9 +83,9 @@ ${matchContext.winner} 가 ${matchContext.loser}를 ${matchContext.score}로 꺾
 // --- Game Logic ---
 const positions = ["TOP", "JGL", "MID", "BOT", "SPT"];
 const playerNames = [
-    "Zeus","Kiin","Doran","Kingen","Morgan","Oner","Canyon","Peanut","Lucid",
-    "Faker","Chovy","Zeka","ShowMaker","Bdd","Gumayusi","Ruler","Viper","Aiming",
-    "Keria","Lehends","Delight","Kellin","BeryL","Pyosik","Cuzz","Sylvie","Clear"
+    "Zeus", "Kiin", "Doran", "Kingen", "Morgan", "Oner", "Canyon", "Peanut", "Lucid",
+    "Faker", "Chovy", "Zeka", "ShowMaker", "Bdd", "Gumayusi", "Ruler", "Viper", "Aiming",
+    "Keria", "Lehends", "Delight", "Kellin", "BeryL", "Pyosik", "Cuzz", "Sylvie", "Clear"
 ];
 
 function randName() { return playerNames[Math.floor(Math.random() * playerNames.length)]; }
@@ -95,7 +108,6 @@ function getPower(ovr) {
 
 async function playSeriesOnline(room, homeTeam, awayTeam, targetWins) {
     let hW = 0, aW = 0, set = 1;
-    const sets = [];
 
     while (hW < targetWins && aW < targetWins) {
         const hOvr = getTeamOvr(homeTeam.roster);
@@ -105,7 +117,6 @@ async function playSeriesOnline(room, homeTeam, awayTeam, targetWins) {
         const homeWin = hPower >= aPower;
 
         if (homeWin) hW++; else aW++;
-        sets.push({ set, homeWin, hW, aW });
 
         // Claude 해설 요청
         const commentary = await getClaudeCommentary({
@@ -153,7 +164,6 @@ wss.on('connection', (ws) => {
         try { msg = JSON.parse(raw); } catch { return; }
 
         switch (msg.type) {
-
             case 'CREATE_ROOM': {
                 const roomId = Math.random().toString(36).slice(2, 8).toUpperCase();
                 const roster = generateRoster(81);
@@ -202,39 +212,32 @@ wss.on('connection', (ws) => {
             }
 
             case 'PLAYER_ACTION': {
-                // 주간 행동 (훈련/휴식/스크림/스트리밍)
                 const room = rooms.get(ws.roomId);
                 if (!room) break;
                 const idx = ws.playerIndex;
-                const team = room.teams[idx];
 
                 if (!room.actions) room.actions = [null, null];
-                room.actions[idx] = msg.actions; // [day1action, day2action, ...]
+                room.actions[idx] = msg.actions;
 
                 sendTo(ws, { type: 'ACTION_RECEIVED' });
 
-                // 양쪽 다 제출했으면 주간 처리
                 if (room.actions[0] && room.actions[1]) {
-                    // 양쪽 행동 적용
                     room.teams.forEach((team, ti) => {
                         const acts = room.actions[ti];
                         acts.forEach(act => {
                             if (act === 'rest') team.fatigue = Math.max(0, team.fatigue - 20);
                             else if (act === 'stream') { team.money += 200; team.fatigue += 15; }
-                            else if (act === 'train') { team.fatigue += 10; if (Math.random() > 0.7) { team.roster[Math.floor(Math.random()*5)].ovr += 1; } }
-                            else if (act === 'scrim') { if (team.money >= 50) { team.money -= 50; team.fatigue += 25; if (Math.random() > 0.5) team.roster[Math.floor(Math.random()*5)].ovr += 2; } }
+                            else if (act === 'train') { team.fatigue += 10; if (Math.random() > 0.7) { team.roster[Math.floor(Math.random() * 5)].ovr += 1; } }
+                            else if (act === 'scrim') { if (team.money >= 50) { team.money -= 50; team.fatigue += 25; if (Math.random() > 0.5) team.roster[Math.floor(Math.random() * 5)].ovr += 2; } }
                         });
                     });
 
                     room.actions = [null, null];
-
                     broadcast(room, { type: 'WEEK_START', week: room.week });
 
-                    // 경기 시뮬레이션
                     const homeTeam = { ...room.teams[0] };
                     const awayTeam = { ...room.teams[1] };
 
-                    // 피로도 패널티
                     if (room.teams[0].fatigue > 50) homeTeam.roster = homeTeam.roster.map(p => ({ ...p, ovr: p.ovr - Math.floor((room.teams[0].fatigue - 45) / 2) }));
                     if (room.teams[1].fatigue > 50) awayTeam.roster = awayTeam.roster.map(p => ({ ...p, ovr: p.ovr - Math.floor((room.teams[1].fatigue - 45) / 2) }));
 
