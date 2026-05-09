@@ -369,10 +369,10 @@ function handle(msg) {
             break;
 
         case 'PLAYER_BOUGHT':
-            myRoster = msg.roster; myMoney = msg.money;
+            myRoster = msg.roster; myMoney = msg.money; fa = msg.fa;
             renderRoster();
             updateHeader();
-            renderMarketInit();
+            renderMarket();
             popup('영입 완료!', 'var(--win)');
             break;
 
@@ -417,9 +417,7 @@ function submitPlan() {
 function refreshMarket() { send({ type: 'REFRESH_MARKET' }); }
 
 function buyPlayer(idx) {
-    const p = fa[idx];
-    if (!p) return;
-    send({ type: 'BUY_PLAYER', buyPlayer: p });
+    send({ type: 'BUY_PLAYER', faIndex: idx });
 }
 
 // ── UI 렌더 ───────────────────────────────────────────
