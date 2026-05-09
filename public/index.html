@@ -294,20 +294,26 @@ function handle(msg) {
             showRegularView();
             clearScore();
             addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
-            msg.results.forEach(r => {
-                const isMe = r.home === myTeam.name || r.away === myTeam.name;
-                const col = isMe ? 'var(--gold)' : 'var(--text)';
-                addLog(`${r.home} ${r.hw} : ${r.aw} ${r.away} → <b>${r.winner}</b> 승`, col);
-                if(isMe) {
-                    document.getElementById('h-name').textContent = r.home;
-                    document.getElementById('a-name').textContent = r.away;
-                    document.getElementById('h-score').textContent = r.hw;
-                    document.getElementById('a-score').textContent = r.aw;
-                    setDots('h-dots', r.hw, r.hw+r.aw);
-                    setDots('a-dots', r.aw, r.hw+r.aw);
+            // 내 경기 먼저 애니메이션, 나머지는 텍스트로
+            (async () => {
+                const myMatch = msg.results.find(r => r.home === myTeam.name || r.away === myTeam.name);
+                const others  = msg.results.filter(r => r !== myMatch);
+                if (myMatch) {
+                    document.getElementById('h-name').textContent = myMatch.home;
+                    document.getElementById('a-name').textContent = myMatch.away;
+                    document.getElementById('h-dots').innerHTML = '';
+                    document.getElementById('a-dots').innerHTML = '';
+                    document.getElementById('h-score').textContent = '0';
+                    document.getElementById('a-score').textContent = '0';
+                    addLog(`--- ${myMatch.home} vs ${myMatch.away} ---`, 'var(--gold)');
+                    await animateSeries(myMatch.home, myMatch.away, myMatch.hw, myMatch.aw);
                 }
-            });
-            updateStandings();
+                others.forEach(r => {
+                    const col = 'var(--muted)';
+                    addLog(`${r.home} ${r.hw}:${r.aw} ${r.away} → <b>${r.winner}</b>`, col);
+                });
+                updateStandings();
+            })();
             break;
 
         case 'WEEK_START':
@@ -522,6 +528,69 @@ function clearScore() {
     document.getElementById('a-score').textContent='0';
     document.getElementById('h-dots').innerHTML='';
     document.getElementById('a-dots').innerHTML='';
+}
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+// 서버에서 받은 최종 스코어(hw:aw)를 세트 단위로 애니메이션 재현
+async function animateSeries(homeName, awayName, finalHw, finalAw) {
+    const targetWins = 2; // Bo3
+    let hw = 0, aw = 0, set = 1;
+
+    // 실제 결과와 동일한 세트 순서를 역산
+    // 최종 스코어로 세트별 결과 배열 생성 (winner가 마지막 세트 가져감)
+    const sets = [];
+    const total = finalHw + finalAw;
+    // 마지막 세트는 winner가 가짐, 나머지는 랜덤하게 분배
+    let hRemain = finalHw, aRemain = finalAw;
+    for (let i = 0; i < total; i++) {
+        if (i === total - 1) {
+            // 마지막 세트: 이긴 쪽이 가져감
+            sets.push(finalHw > finalAw ? 'h' : 'a');
+        } else {
+            // 중간 세트: 남은 수에서 랜덤 분배 (자연스럽게)
+            const hProb = hRemain / (hRemain + aRemain);
+            if (Math.random() < hProb && hRemain > 0 && hRemain < finalHw) {
+                sets.push('h'); hRemain--;
+            } else if (aRemain > 0 && aRemain < finalAw) {
+                sets.push('a'); aRemain--;
+            } else if (hRemain > 0) {
+                sets.push('h'); hRemain--;
+            } else {
+                sets.push('a'); aRemain--;
+            }
+        }
+    }
+
+    document.getElementById('h-dots').innerHTML = '';
+    document.getElementById('a-dots').innerHTML = '';
+
+    for (const winner of sets) {
+        await delay(500);
+        if (winner === 'h') hw++; else aw++;
+
+        document.getElementById('h-score').textContent = hw;
+        document.getElementById('a-score').textContent = aw;
+
+        // 홈 dot
+        const hd = document.createElement('div');
+        hd.className = 'dot ' + (winner === 'h' ? 'dot-w' : 'dot-l');
+        document.getElementById('h-dots').appendChild(hd);
+
+        // 어웨이 dot
+        const ad = document.createElement('div');
+        ad.className = 'dot ' + (winner === 'a' ? 'dot-w' : 'dot-l');
+        document.getElementById('a-dots').appendChild(ad);
+
+        const setWinner = winner === 'h' ? homeName : awayName;
+        addLog(`[SET ${set}] ${setWinner} 승리!`, winner === 'h' ? 'var(--win)' : 'var(--loss)');
+        set++;
+    }
+
+    await delay(300);
+    const matchWinner = finalHw > finalAw ? homeName : awayName;
+    const isMyWin = matchWinner === myTeam?.name;
+    addLog(`🏆 ${matchWinner} 승리! (${finalHw}:${finalAw})`, isMyWin ? 'var(--gold)' : 'var(--muted)');
 }
 
 function setDots(id, wins, total) {
