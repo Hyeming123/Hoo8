@@ -250,7 +250,12 @@ function advanceWeek(room) {
     if (room.week > room.schedule.length) {
         startPO(room);
     } else {
+        // 공통 브로드캐스트
         broadcast(room, { type: 'WEEK_START', week: room.week, teams: publicTeams(room) });
+        // 각 플레이어에게 개인 피로도/자금 전송
+        room.players.forEach(p => {
+            sendTo(p.ws, { type: 'MY_STATUS', fatigue: p.fatigue, money: p.money });
+        });
         room.pendingActions = {};
     }
 }
