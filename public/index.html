@@ -357,6 +357,11 @@ function handle(msg) {
             setMainBtn('새 시즌 준비 중...', true);
             break;
 
+        case 'MY_STATUS':
+            myFatigue = msg.fatigue; myMoney = msg.money;
+            updateHeader();
+            break;
+
         case 'STOVE':
             myFatigue = 0;
             renderMarketInit();
