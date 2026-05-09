@@ -400,11 +400,22 @@ wss.on('connection', ws => {
 
                 room.state = 'PLAYING';
                 room.schedule = genSchedule(room.teams);
+
+                // 각 플레이어 초기 FA 생성
+                room.players.forEach(p => {
+                    p.fa = Array.from({length:6}, () => genPlayer(pick(POSITIONS), 75 + Math.floor(rng(0, 15))));
+                });
+
                 broadcast(room, {
                     type: 'GAME_START', split: 'SPRING', year: 1,
                     teams: publicTeams(room),
                     schedule: room.schedule.map(wk => wk.map(([h, a]) => [h.name, a.name])),
                     week: 1
+                });
+
+                // 각 플레이어에게 개인 FA 전송
+                room.players.forEach(p => {
+                    sendTo(p.ws, { type: 'MARKET_REFRESHED', fa: p.fa, money: p.money });
                 });
                 break;
             }
@@ -439,16 +450,21 @@ wss.on('connection', ws => {
                 const team = room.teams.find(t => t.name === player?.teamName);
                 if (!player || !team) break;
 
-                const { buyPlayer } = msg;
-                if (player.money < buyPlayer.price) { sendTo(ws, { type: 'ERROR', message: '자금 부족' }); break; }
+                const idx = msg.faIndex;
+                if (!player.fa || idx == null || !player.fa[idx]) {
+                    sendTo(ws, { type: 'ERROR', message: '유효하지 않은 선수입니다.' }); break;
+                }
+                const buyP = player.fa[idx];
+                if (player.money < buyP.price) { sendTo(ws, { type: 'ERROR', message: '자금 부족' }); break; }
 
-                const existIdx = player.roster.findIndex(p => p.pos === buyPlayer.pos);
-                if (existIdx > -1) player.roster[existIdx] = buyPlayer;
-                else player.roster.push(buyPlayer);
-                player.money -= buyPlayer.price;
+                const existIdx = player.roster.findIndex(p => p.pos === buyP.pos);
+                if (existIdx > -1) player.roster[existIdx] = buyP;
+                else player.roster.push(buyP);
+                player.money -= buyP.price;
+                player.fa.splice(idx, 1);
                 team.roster = player.roster; team.money = player.money;
 
-                sendTo(ws, { type: 'PLAYER_BOUGHT', roster: player.roster, money: player.money });
+                sendTo(ws, { type: 'PLAYER_BOUGHT', roster: player.roster, money: player.money, fa: player.fa });
                 break;
             }
 
@@ -462,8 +478,8 @@ wss.on('connection', ws => {
                 const team = room.teams.find(t => t.name === player.teamName);
                 if (team) team.money = player.money;
 
-                const fa = POSITIONS.map(() => genPlayer(pick(POSITIONS), 75 + Math.floor(rng(0, 15))));
-                sendTo(ws, { type: 'MARKET_REFRESHED', fa, money: player.money });
+                player.fa = Array.from({length:6}, () => genPlayer(pick(POSITIONS), 75 + Math.floor(rng(0, 15))));
+                sendTo(ws, { type: 'MARKET_REFRESHED', fa: player.fa, money: player.money });
                 break;
             }
         }
