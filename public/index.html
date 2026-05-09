@@ -1,369 +1,617 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Esports Manager : 11 Player League</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@400;700&display=swap"
-        rel="stylesheet">
-    <style>
-        :root {
-            --bg: #050810;
-            --panel: rgba(18, 24, 36, 0.9);
-            --primary: #d4af37;
-            --accent: #00e5ff;
-            --text: #f1f5f9;
-            --win: #10b981;
-            --loss: #ef4444;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esports Manager : Hardcore Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:#050810; --panel:rgba(18,24,36,0.9); --border:#232e42;
+    --primary:#d4af37; --accent:#00e5ff; --text:#f1f5f9;
+    --muted:#94a3b8; --win:#10b981; --loss:#ef4444; --gold:#fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:radial-gradient(circle at 50% 0%,#111a2e,#050810);color:var(--text);font-family:'Noto Sans KR',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+header{background:rgba(10,14,23,.95);border-bottom:2px solid var(--primary);padding:10px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:10;}
+.logo{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:var(--primary);letter-spacing:2px;}
+.stats-bar{font-family:'Orbitron',sans-serif;display:flex;gap:10px;font-size:12px;flex-wrap:wrap;}
+.stat{background:rgba(255,255,255,.03);padding:5px 12px;border-radius:6px;border:1px solid var(--border);}
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Noto Sans KR', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+/* ── 오버레이 ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;}
+.modal{background:linear-gradient(145deg,#121824,#0a0e17);padding:44px;border:1px solid var(--primary);border-radius:16px;text-align:center;width:460px;box-shadow:0 10px 50px rgba(0,0,0,.8);}
+.modal h1{font-family:'Orbitron',sans-serif;color:var(--primary);font-size:26px;margin-bottom:6px;}
+.modal h2{font-family:'Orbitron',sans-serif;color:var(--accent);font-size:18px;margin-bottom:20px;}
 
-        header {
-            background: #0a0e17;
-            border-bottom: 2px solid var(--primary);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+/* ── 인풋/버튼 ── */
+input,select{width:100%;background:#0f172a;color:#fff;border:1px solid #334155;padding:10px 12px;border-radius:8px;font-family:inherit;font-size:14px;margin-bottom:12px;outline:none;transition:border-color .2s;}
+input:focus,select:focus{border-color:var(--accent);}
+button{background:rgba(212,175,55,.05);color:var(--primary);border:1px solid var(--primary);padding:10px 16px;font-family:'Orbitron',sans-serif;cursor:pointer;transition:all .2s;border-radius:6px;text-transform:uppercase;font-size:12px;font-weight:700;}
+button:hover:not(:disabled){background:var(--primary);color:#000;box-shadow:0 0 15px rgba(212,175,55,.4);transform:translateY(-1px);}
+button:disabled{border-color:#334155;color:#64748b;background:rgba(255,255,255,.02);cursor:not-allowed;}
+.btn-full{width:100%;padding:14px;font-size:14px;margin-top:4px;}
+.btn-accent{border-color:var(--accent);color:var(--accent);}
+.btn-accent:hover:not(:disabled){background:var(--accent);color:#000;box-shadow:0 0 15px rgba(0,229,255,.4);}
 
-        .logo {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            font-weight: 900;
-            color: var(--primary);
-            letter-spacing: 2px;
-        }
+/* ── 대기실 ── */
+#screen-waiting{display:none;}
+.player-item{background:rgba(255,255,255,.04);padding:10px 14px;border-radius:6px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
 
-        .screen {
-            display: none;
-            flex: 1;
-            padding: 30px;
-            flex-direction: column;
-            align-items: center;
-        }
+/* ── 게임 레이아웃 ── */
+#screen-game{display:none;flex:1;overflow:hidden;}
+.grid{display:grid;grid-template-columns:320px 1fr 320px;gap:16px;padding:16px;height:100%;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;overflow-y:auto;display:flex;flex-direction:column;backdrop-filter:blur(6px);}
+.panel::-webkit-scrollbar{width:5px;}
+.panel::-webkit-scrollbar-thumb{background:#334155;border-radius:3px;}
+h3{font-family:'Orbitron',sans-serif;color:var(--primary);font-size:14px;border-bottom:2px solid var(--border);padding-bottom:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
 
-        .screen.active {
-            display: flex;
-        }
+/* 탭 */
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.tabs button{flex:1;min-width:60px;font-size:10px;padding:8px 4px;}
+.tab-active{background:rgba(212,175,55,.2) !important;color:var(--primary) !important;}
 
-        .card {
-            background: var(--panel);
-            border: 1px solid #232e42;
-            border-radius: 16px;
-            padding: 40px;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
+/* 로스터 */
+.p-row{background:rgba(255,255,255,.03);padding:10px;border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:13px;border-left:3px solid #0ea5e9;}
+.p-row:hover{background:rgba(255,255,255,.06);}
 
-        h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--primary);
-            text-align: center;
-            margin-bottom: 25px;
-        }
+/* 중앙 패널 */
+.match-field{background:radial-gradient(circle at center,#162032,#080c14);border:1px solid rgba(0,229,255,.3);align-items:center;position:relative;}
+.scoreboard{display:flex;align-items:center;justify-content:center;gap:40px;width:100%;margin:20px 0 10px;}
+.team-box{text-align:center;width:140px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.5));padding:16px;border-radius:12px;border:1px solid var(--border);}
+.team-name{font-size:16px;font-weight:800;margin-bottom:8px;}
+.score-num{font-family:'Orbitron',sans-serif;font-size:56px;font-weight:900;color:var(--primary);line-height:1;}
+.set-dots{display:flex;justify-content:center;gap:6px;margin-top:8px;min-height:14px;}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid #334155;background:#0f172a;transition:all .3s;}
+.dot-w{background:var(--primary);border-color:#fff;box-shadow:0 0 8px var(--primary);}
+.dot-l{background:var(--loss);border-color:#7f1d1d;}
 
-        .btn {
-            width: 100%;
-            padding: 15px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            border-radius: 8px;
-            cursor: pointer;
-            border: none;
-            text-transform: uppercase;
-            margin-top: 10px;
-            transition: 0.2s;
-        }
+#game-log{flex:1;background:rgba(0,0,0,.6);border-radius:8px;padding:14px;overflow-y:auto;font-size:12px;line-height:1.7;color:#cbd5e1;border:1px solid #1e293b;margin:0 0 10px;}
+#game-log .log-line{padding-left:8px;border-left:2px solid;margin-bottom:6px;}
 
-        .btn-primary {
-            background: var(--primary);
-            color: #000;
-        }
+/* 플래너 */
+.plan-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);padding:10px;border-radius:6px;margin-bottom:8px;}
+.plan-row span{font-weight:700;min-width:44px;font-size:12px;}
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
-        }
+/* 스탠딩 */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{font-family:'Orbitron',sans-serif;color:var(--muted);padding:8px 4px;border-bottom:2px solid #334155;font-size:10px;}
+td{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center;}
+.my-row td{background:rgba(212,175,55,.1);color:var(--accent);font-weight:700;}
+.cutline{border-bottom:2px dashed rgba(0,229,255,.4) !important;}
 
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid var(--accent);
-            color: var(--accent);
-        }
+/* 토너먼트 보드 */
+#tourney-board{display:none;width:100%;flex:1;overflow-y:auto;background:rgba(0,0,0,.6);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:18px;}
+.t-phase{font-family:'Orbitron',sans-serif;color:var(--gold);border-bottom:1px solid #334155;padding-bottom:6px;margin:18px 0 10px;font-size:13px;}
+.t-match{display:flex;justify-content:space-between;background:rgba(255,255,255,.03);padding:10px 14px;font-size:13px;border-left:4px solid var(--accent);border-radius:6px;margin-bottom:6px;}
+.elim{text-decoration:line-through;opacity:.35;}
 
-        input {
-            width: 100%;
-            background: #0f172a;
-            color: #fff;
-            border: 1px solid #334155;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
-        }
+/* 하단 버튼 */
+#main-btn{position:absolute;bottom:18px;width:calc(100% - 36px);font-size:15px;font-weight:800;padding:14px;background:linear-gradient(90deg,rgba(212,175,55,.15),rgba(212,175,55,.25));border:1px solid var(--primary);border-radius:8px;letter-spacing:1px;}
+#main-btn:hover:not(:disabled){background:linear-gradient(90deg,var(--primary),var(--gold));transform:translateY(-2px);box-shadow:0 6px 20px rgba(212,175,55,.5);}
 
-        .player-list {
-            width: 100%;
-            margin: 20px 0;
-        }
+/* 팝업 메시지 */
+#popup{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(16,24,36,.95);border:1px solid var(--accent);padding:12px 24px;border-radius:8px;font-size:14px;z-index:200;display:none;animation:fadeup .3s;}
+@keyframes fadeup{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}
 
-        .player-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 300px 1fr 300px;
-            gap: 20px;
-            width: 100%;
-            flex: 1;
-        }
-
-        .panel {
-            background: var(--panel);
-            border: 1px solid #232e42;
-            border-radius: 12px;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th,
-        td {
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid #334155;
-        }
-
-        .my-team {
-            color: var(--accent);
-            font-weight: bold;
-        }
-
-        #log {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 15px;
-            border-radius: 8px;
-            height: 300px;
-            overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-    </style>
+/* 기록 */
+.rec-card{background:rgba(0,0,0,.5);padding:12px;margin-bottom:10px;border-radius:8px;border-left:4px solid var(--gold);font-size:12px;}
+</style>
 </head>
-
 <body>
-    <header>
-        <div class="logo">ESPORTS MANAGER</div>
-        <div id="header-stats" style="display:none; gap:20px;">
-            <span>WEEK: <span id="st-week">1</span></span>
-            <span>MONEY: <span id="st-money">1500</span>G</span>
-        </div>
-    </header>
 
-    <!-- LOBBY -->
-    <div id="screen-lobby" class="screen active">
-        <div class="card">
-            <h2>MULTIPLAYER LEAGUE</h2>
-            <input type="text" id="inp-team" placeholder="TEAM NAME">
-            <button class="btn btn-primary" onclick="createRoom()">CREATE LEAGUE</button>
-            <div style="margin: 20px 0; text-align: center; color: #64748b;">OR</div>
-            <input type="text" id="inp-room" placeholder="ROOM CODE">
-            <button class="btn btn-secondary" onclick="joinRoom()">JOIN LEAGUE</button>
+<!-- ── 로비 오버레이 ── -->
+<div id="ov-lobby" class="overlay">
+    <div class="modal">
+        <h1>ESPORTS MANAGER</h1>
+        <p style="color:var(--muted);margin-bottom:24px;font-size:13px;">Hardcore Multiplayer</p>
+        <input id="inp-team" placeholder="팀 이름 입력" maxlength="16">
+        <button class="btn-full" onclick="createRoom()">방 만들기</button>
+        <div style="margin:16px 0;color:#475569;font-size:12px;">── 또는 ──</div>
+        <input id="inp-code" placeholder="방 코드 (6자리)" maxlength="6" style="text-transform:uppercase;">
+        <button class="btn-full btn-accent" onclick="joinRoom()">방 참가</button>
+    </div>
+</div>
+
+<!-- ── 대기실 오버레이 ── -->
+<div id="ov-waiting" class="overlay" style="display:none;">
+    <div class="modal">
+        <h2>WAITING ROOM</h2>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:6px;">ROOM CODE</div>
+        <div id="room-code" style="font-family:'Orbitron';font-size:44px;color:var(--primary);letter-spacing:6px;margin-bottom:20px;">------</div>
+        <div id="player-list" style="margin-bottom:16px;text-align:left;"></div>
+        <div id="wait-msg" style="color:var(--accent);font-size:13px;margin-bottom:12px;">최대 8명까지 참가 가능 (나머지는 봇)</div>
+        <button id="start-btn" class="btn-full" style="display:none;" onclick="startGame()">시즌 시작</button>
+    </div>
+</div>
+
+<!-- ── 헤더 ── -->
+<header>
+    <div class="logo">ESPORTS MANAGER</div>
+    <div class="stats-bar" id="stats-bar" style="display:none;">
+        <div class="stat">HC LV.<span id="st-lv">1</span></div>
+        <div class="stat" style="color:var(--gold);">YEAR <span id="st-year">1</span> · <span id="st-split">SPRING</span></div>
+        <div class="stat">WEEK <span id="st-week" style="color:var(--accent);font-weight:bold;">1</span></div>
+        <div class="stat">💰 <span id="st-money" style="color:var(--win);">1,500</span>G</div>
+        <div class="stat">피로 <span id="st-fatigue">0</span>%</div>
+    </div>
+</header>
+
+<!-- ── 게임 화면 ── -->
+<div id="screen-game">
+<div class="grid">
+
+    <!-- 왼쪽 패널 -->
+    <div class="panel">
+        <div class="tabs">
+            <button id="tb-roster"  onclick="switchTab('roster')"  class="tab-active">ROSTER</button>
+            <button id="tb-planner" onclick="switchTab('planner')">PLANNER</button>
+            <button id="tb-market"  onclick="switchTab('market')">MARKET</button>
+            <button id="tb-records" onclick="switchTab('records')" style="border-color:var(--gold);color:var(--gold);">REC</button>
+        </div>
+
+        <div id="tab-roster">
+            <h3>MY ROSTER</h3>
+            <div id="roster-list"></div>
+        </div>
+        <div id="tab-planner" style="display:none;">
+            <h3>WEEKLY PLANNER</h3>
+            <div id="planner-ui"></div>
+        </div>
+        <div id="tab-market" style="display:none;">
+            <h3>FREE AGENTS <button onclick="refreshMarket()" style="font-size:10px;padding:4px 8px;">리프레시 (50G)</button></h3>
+            <div id="market-list"></div>
+        </div>
+        <div id="tab-records" style="display:none;">
+            <h3 style="color:var(--gold);">HALL OF FAME</h3>
+            <div id="history-list"></div>
         </div>
     </div>
 
-    <!-- WAITING ROOM -->
-    <div id="screen-waiting" class="screen">
-        <div class="card">
-            <h2>WAITING ROOM</h2>
-            <div style="font-size: 14px; color: #94a3b8; text-align: center;">ROOM CODE</div>
-            <div id="room-code"
-                style="font-family: 'Orbitron'; font-size: 40px; color: var(--primary); text-align: center; margin: 10px 0; letter-spacing: 5px;">
-                ------</div>
-            <div class="player-list" id="player-list"></div>
-            <button id="start-btn" class="btn btn-primary" style="display:none;" onclick="startGame()">START
-                SEASON</button>
-            <div id="wait-msg" style="text-align:center; color: var(--accent);">Waiting for more players (Max 11)...
-            </div>
-        </div>
-    </div>
+    <!-- 중앙 패널 -->
+    <div class="panel match-field">
+        <h3 id="match-title" style="position:absolute;top:16px;left:16px;border:none;background:rgba(0,0,0,.5);padding:5px 12px;border-radius:6px;z-index:2;">WAITING...</h3>
 
-    <!-- GAME SCREEN -->
-    <div id="screen-game" class="screen">
-        <div class="grid">
-            <div class="panel">
-                <h3 style="font-family: 'Orbitron'; color: var(--primary);">ROSTER</h3>
-                <div id="roster-list"></div>
-            </div>
-            <div class="panel">
-                <h3 style="font-family: 'Orbitron'; color: var(--primary); text-align:center;">MATCH CENTER</h3>
-                <div id="log"></div>
-                <div id="planner" style="margin-top: 20px;">
-                    <div id="week-plan-ui"></div>
-                    <button id="submit-plan" class="btn btn-primary" onclick="submitPlan()">SUBMIT WEEKLY PLAN</button>
+        <div id="regular-view" style="width:100%;display:flex;flex-direction:column;align-items:center;height:100%;padding-top:50px;">
+            <div class="scoreboard">
+                <div class="team-box">
+                    <div class="team-name" id="h-name">HOME</div>
+                    <div class="score-num" id="h-score">0</div>
+                    <div class="set-dots" id="h-dots"></div>
+                </div>
+                <div style="font-family:'Orbitron';font-size:24px;color:var(--muted);font-weight:900;">VS</div>
+                <div class="team-box">
+                    <div class="team-name" id="a-name">AWAY</div>
+                    <div class="score-num" id="a-score">0</div>
+                    <div class="set-dots" id="a-dots"></div>
                 </div>
             </div>
-            <div class="panel">
-                <h3 style="font-family: 'Orbitron'; color: var(--primary);">STANDINGS</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>TEAM</th>
-                            <th>W</th>
-                            <th>L</th>
-                        </tr>
-                    </thead>
-                    <tbody id="standings-body"></tbody>
-                </table>
-            </div>
+            <div id="game-log" style="width:90%;"></div>
         </div>
+
+        <div id="tourney-board">
+            <div id="tourney-content"></div>
+        </div>
+
+        <button id="main-btn" onclick="submitPlan()">SUBMIT WEEKLY PLAN</button>
     </div>
 
-    <script>
-        let ws;
-        let myTeam, myIndex, currentWeek = 1;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
+    <!-- 오른쪽 패널 -->
+    <div class="panel">
+        <h3 id="standings-title">REGULAR SEASON</h3>
+        <table>
+            <thead><tr><th>RK</th><th style="text-align:left;padding-left:8px;">TEAM</th><th>W</th><th>L</th><th>SD</th><th style="color:var(--gold);">CP</th></tr></thead>
+            <tbody id="standings-body"></tbody>
+        </table>
+    </div>
 
-        function connect() {
-            ws = new WebSocket(`${protocol}//${host}`);
-            ws.onmessage = (e) => {
-                const msg = JSON.parse(e.data);
-                console.log("RECV:", msg);
-                switch (msg.type) {
-                    case 'ROOM_CREATED':
-                    case 'ROOM_JOINED':
-                        myTeam = msg.team; myIndex = msg.playerIndex;
-                        document.getElementById('room-code').textContent = msg.roomId;
-                        showScreen('waiting');
-                        if (myIndex === 0) document.getElementById('start-btn').style.display = 'block';
-                        break;
-                    case 'PLAYER_JOINED':
-                        updatePlayerList(msg.teams);
-                        break;
-                    case 'GAME_START':
-                        showScreen('game');
-                        document.getElementById('header-stats').style.display = 'flex';
-                        renderRoster();
-                        renderPlanner();
-                        addLog("시즌이 시작되었습니다!");
-                        break;
-                    case 'MATCH_RESULT':
-                        addLog(`[WEEK ${msg.week}] ${msg.home} vs ${msg.away} -> ${msg.winner} 승리!`);
-                        break;
-                    case 'WEEK_START':
-                        currentWeek = msg.week;
-                        document.getElementById('st-week').textContent = currentWeek;
-                        updateStandings(msg.teams);
-                        document.getElementById('submit-plan').disabled = false;
-                        document.getElementById('submit-plan').textContent = "SUBMIT WEEKLY PLAN";
-                        addLog(`--- WEEK ${currentWeek} 시작 ---`);
-                        break;
-                    case 'SEASON_END':
-                        alert(`시즌 종료! 우승팀: ${msg.winner}`);
-                        location.reload();
-                        break;
+</div>
+</div>
+
+<!-- 팝업 -->
+<div id="popup"></div>
+
+<script>
+// ── 상태 ──────────────────────────────────────────────
+let ws, myTeam, myIndex, myRoster = [], myMoney = 1500, myFatigue = 0, coachLv = 1;
+let currentWeek = 1, currentSplit = 'SPRING', currentYear = 1;
+let allTeams = [], schedule = [], fa = [], historyData = [];
+let submitted = false, phase = 'REG'; // REG | PO | WORLDS | STOVE
+
+const TIERS = ovr => {
+    if(ovr>=92) return '<span style="color:#e11d48;font-weight:900;">S+</span>';
+    if(ovr>=88) return '<span style="color:#db2777;font-weight:bold;">S</span>';
+    if(ovr>=84) return '<span style="color:#9333ea;font-weight:bold;">A</span>';
+    if(ovr>=80) return '<span style="color:#2563eb;font-weight:bold;">B</span>';
+    if(ovr>=75) return '<span style="color:#16a34a;font-weight:bold;">C</span>';
+    return '<span style="color:#64748b;font-weight:bold;">D</span>';
+};
+
+// ── WebSocket 연결 ────────────────────────────────────
+function connect() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+
+    ws.onopen = () => console.log('WS connected');
+    ws.onclose = () => { popup('연결이 끊겼습니다.', 'var(--loss)'); setTimeout(connect, 3000); };
+    ws.onerror = e => console.error(e);
+
+    ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        handle(msg);
+    };
+}
+
+function send(data) { if(ws?.readyState===1) ws.send(JSON.stringify(data)); }
+
+// ── 메시지 핸들러 ─────────────────────────────────────
+function handle(msg) {
+    switch(msg.type) {
+        case 'ROOM_CREATED':
+        case 'ROOM_JOINED':
+            myTeam = msg.team; myIndex = msg.playerIndex;
+            myRoster = msg.team.roster; myMoney = msg.team.money;
+            document.getElementById('room-code').textContent = msg.roomId;
+            document.getElementById('ov-lobby').style.display = 'none';
+            document.getElementById('ov-waiting').style.display = 'flex';
+            if(myIndex === 0) document.getElementById('start-btn').style.display = 'block';
+            break;
+
+        case 'PLAYER_JOINED':
+            updateWaitingList(msg.teams);
+            break;
+
+        case 'ERROR':
+            popup(msg.message, 'var(--loss)'); break;
+
+        case 'GAME_START':
+        case 'SPLIT_START':
+            allTeams = msg.teams; schedule = msg.schedule;
+            currentWeek = msg.week || 1; currentSplit = msg.split; currentYear = msg.year;
+            phase = 'REG'; submitted = false;
+            document.getElementById('ov-waiting').style.display = 'none';
+            document.getElementById('screen-game').style.display = 'block';
+            document.getElementById('stats-bar').style.display = 'flex';
+            showRegularView();
+            renderPlannerUI();
+            renderMarketInit();
+            updateStandings();
+            updateHeader();
+            prepMatchTitle();
+            setMainBtn('SUBMIT WEEKLY PLAN', false);
+            addLog(`🏆 ${currentSplit} SPLIT YEAR ${currentYear} 시작!`, 'var(--gold)');
+            break;
+
+        case 'ACTION_RECEIVED':
+            submitted = true;
+            setMainBtn('다른 플레이어 대기 중...', true);
+            break;
+
+        case 'WEEK_RESULT':
+            currentWeek = msg.week;
+            allTeams = msg.teams;
+            phase = 'REG';
+            showRegularView();
+            clearScore();
+            addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
+            msg.results.forEach(r => {
+                const isMe = r.home === myTeam.name || r.away === myTeam.name;
+                const col = isMe ? 'var(--gold)' : 'var(--text)';
+                addLog(`${r.home} ${r.hw} : ${r.aw} ${r.away} → <b>${r.winner}</b> 승`, col);
+                if(isMe) {
+                    document.getElementById('h-name').textContent = r.home;
+                    document.getElementById('a-name').textContent = r.away;
+                    document.getElementById('h-score').textContent = r.hw;
+                    document.getElementById('a-score').textContent = r.aw;
+                    setDots('h-dots', r.hw, r.hw+r.aw);
+                    setDots('a-dots', r.aw, r.hw+r.aw);
                 }
-            };
-        }
+            });
+            updateStandings();
+            break;
 
-        function createRoom() {
-            const teamName = document.getElementById('inp-team').value;
-            if (!teamName) return alert("팀명을 입력하세요.");
-            ws.send(JSON.stringify({ type: 'CREATE_ROOM', teamName }));
-        }
+        case 'WEEK_START':
+            currentWeek = msg.week;
+            allTeams = msg.teams;
+            submitted = false;
+            updateHeader();
+            updateStandings();
+            prepMatchTitle();
+            setMainBtn('SUBMIT WEEKLY PLAN', false);
+            addLog(`━━ WEEK ${currentWeek} 시작 ━━`, 'var(--accent)');
+            break;
 
-        function joinRoom() {
-            const roomId = document.getElementById('inp-room').value;
-            const teamName = document.getElementById('inp-team').value;
-            if (!roomId || !teamName) return alert("방 코드와 팀명을 입력하세요.");
-            ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId, teamName }));
-        }
+        case 'PO_START':
+            phase = 'PO';
+            allTeams = msg.teams;
+            addLog('🏆 플레이오프 시작!', 'var(--gold)');
+            document.getElementById('standings-title').textContent = currentSplit + ' PLAYOFFS';
+            showTourneyBoard();
+            setMainBtn('플레이오프 결과 보기', false);
+            break;
 
-        function startGame() {
-            ws.send(JSON.stringify({ type: 'START_GAME' }));
-        }
+        case 'PO_RESULT':
+            renderTourney(msg.log, '플레이오프');
+            allTeams = msg.teams;
+            updateStandings();
+            addLog(`🥇 ${currentSplit} 챔피언: ${msg.champion}`, 'var(--gold)');
+            setMainBtn('다음 스플릿 준비 중...', true);
+            break;
 
-        function submitPlan() {
-            const actions = [];
-            for (let i = 1; i <= 5; i++) actions.push(document.getElementById(`plan-${i}`).value);
-            ws.send(JSON.stringify({ type: 'PLAYER_ACTION', actions }));
-            document.getElementById('submit-plan').disabled = true;
-            document.getElementById('submit-plan').textContent = "WAITING FOR OTHERS...";
-        }
+        case 'WORLDS_START':
+            phase = 'WORLDS';
+            addLog('🌍 월즈 시작!', 'var(--accent)');
+            setMainBtn('월즈 결과 대기 중...', true);
+            break;
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(`screen-${id}`).classList.add('active');
-        }
+        case 'WORLDS_RESULT':
+            renderTourney(msg.log, '월즈');
+            addLog(`🌍 월즈 챔피언: ${msg.champion}`, 'var(--accent)');
+            historyData.push({ year: currentYear, worldsChamp: msg.champion, split: currentSplit });
+            break;
 
-        function updatePlayerList(teams) {
-            const list = document.getElementById('player-list');
-            list.innerHTML = teams.map((t, i) => `<div class="player-item"><span>${i + 1}. ${t}</span> ${i === 0 ? '<span style="color:var(--primary)">HOST</span>' : ''}</div>`).join('');
-        }
+        case 'STOVE_LEAGUE':
+            phase = 'STOVE';
+            currentYear = msg.year;
+            addLog(`❄️ 스토브리그 진행 중 (YEAR ${currentYear})`, 'var(--muted)');
+            setMainBtn('새 시즌 준비 중...', true);
+            break;
 
-        function renderRoster() {
-            const list = document.getElementById('roster-list');
-            list.innerHTML = myTeam.roster.map(p => `<div class="player-item"><span>${p.pos}</span> <span>${p.name}</span> <span>Tier ${Math.floor(p.ovr / 10)}</span></div>`).join('');
-        }
+        case 'STOVE':
+            myFatigue = 0;
+            renderMarketInit();
+            popup('스토브리그: 선수를 영입하세요!', 'var(--gold)');
+            break;
 
-        function renderPlanner() {
-            let html = "";
-            for (let i = 1; i <= 5; i++) {
-                html += `<div style="margin-bottom:10px;">DAY ${i}: <select id="plan-${i}" style="background:#0f172a; color:#fff; border:1px solid #334155; padding:5px; border-radius:4px; width:100%;">
-                    <option value="train">개인훈련 (기량↑, 피로+10)</option>
-                    <option value="rest">휴식 (피로-20)</option>
-                    <option value="stream">스트리밍 (+200G, 피로+15)</option>
-                    <option value="scrim">스크림 (-50G, 기량↑↑, 피로+25)</option>
-                </select></div>`;
-            }
-            document.getElementById('week-plan-ui').innerHTML = html;
-        }
+        case 'PLAYER_BOUGHT':
+            myRoster = msg.roster; myMoney = msg.money;
+            renderRoster();
+            updateHeader();
+            renderMarketInit();
+            popup('영입 완료!', 'var(--win)');
+            break;
 
-        function updateStandings(teams) {
-            const body = document.getElementById('standings-body');
-            const sorted = [...teams].sort((a, b) => b.w - a.w);
-            body.innerHTML = sorted.map((t, i) => `<tr class="${t.name === myTeam.name ? 'my-team' : ''}"><td>${i + 1}</td><td>${t.name}</td><td>${t.w}</td><td>${t.l}</td></tr>`).join('');
+        case 'MARKET_REFRESHED':
+            fa = msg.fa; myMoney = msg.money;
+            updateHeader();
+            renderMarket();
+            break;
+    }
+}
 
-            const me = teams.find(t => t.name === myTeam.name);
-            if (me) {
-                document.getElementById('st-money').textContent = me.money.toLocaleString();
-            }
-        }
+// ── 로비 액션 ─────────────────────────────────────────
+function createRoom() {
+    const teamName = document.getElementById('inp-team').value.trim();
+    if (!teamName) { popup('팀 이름을 입력하세요', 'var(--loss)'); return; }
+    connect();
+    ws.onopen = () => send({ type: 'CREATE_ROOM', teamName });
+}
 
-        function addLog(msg) {
-            const log = document.getElementById('log');
-            log.innerHTML += `<div>> ${msg}</div>`;
-            log.scrollTop = log.scrollHeight;
-        }
+function joinRoom() {
+    const teamName = document.getElementById('inp-team').value.trim();
+    const roomId   = document.getElementById('inp-code').value.trim().toUpperCase();
+    if (!teamName || !roomId) { popup('팀 이름과 방 코드를 입력하세요', 'var(--loss)'); return; }
+    connect();
+    ws.onopen = () => send({ type: 'JOIN_ROOM', teamName, roomId });
+}
 
-        connect();
-    </script>
+function startGame() { send({ type: 'START_GAME' }); }
+
+// ── 플래너 제출 ───────────────────────────────────────
+function submitPlan() {
+    if (submitted) return;
+    const actions = [];
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById(`plan-${i}`);
+        if (el) actions.push(el.value);
+    }
+    send({ type: 'PLAYER_ACTION', actions });
+}
+
+// ── 마켓 ──────────────────────────────────────────────
+function refreshMarket() { send({ type: 'REFRESH_MARKET' }); }
+
+function buyPlayer(idx) {
+    const p = fa[idx];
+    if (!p) return;
+    send({ type: 'BUY_PLAYER', buyPlayer: p });
+}
+
+// ── UI 렌더 ───────────────────────────────────────────
+function updateWaitingList(teams) {
+    document.getElementById('player-list').innerHTML = teams.map((name, i) =>
+        `<div class="player-item"><span>${i+1}. ${name}</span>${i===0?'<span style="color:var(--primary);font-size:11px;">HOST</span>':''}</div>`
+    ).join('');
+}
+
+function renderRoster() {
+    document.getElementById('roster-list').innerHTML = myRoster.map(p => {
+        const formTxt = p.form > 0 ? `<span style="color:var(--win)">+${p.form}</span>`
+            : p.form < 0 ? `<span style="color:var(--loss)">${p.form}</span>`
+            : `<span style="color:#555">-</span>`;
+        return `<div class="p-row">
+            <span style="width:36px;font-weight:700;color:var(--muted);font-size:11px;">${p.pos}</span>
+            <span style="flex:1;font-weight:700;">${p.name}</span>
+            <span>${TIERS(p.ovr+p.form)}</span>
+            <span style="width:28px;text-align:right;">${formTxt}</span>
+        </div>`;
+    }).join('');
+}
+
+function renderPlannerUI() {
+    const actions = ['rest','stream','train','scrim'];
+    const labels  = ['휴식 (피로-20)','스트리밍 (+200G, 피로+15)','개인훈련 (기량↑, 피로+10)','스크림 (-50G, 기량↑↑, 피로+25)'];
+    document.getElementById('planner-ui').innerHTML = Array.from({length:5},(_,i)=>`
+        <div class="plan-row">
+            <span>DAY ${i+1}</span>
+            <select id="plan-${i+1}" style="margin:0;flex:1;">
+                ${actions.map((a,j)=>`<option value="${a}">${labels[j]}</option>`).join('')}
+            </select>
+        </div>`).join('');
+}
+
+function renderMarketInit() {
+    // 초기 6명 FA 생성 (서버에서 받기 전 임시)
+    const pos = ["TOP","JGL","MID","BOT","SPT"];
+    fa = Array.from({length:6},()=>{
+        const baseOvr = 75 + Math.floor(Math.random()*15);
+        const p = pos[Math.floor(Math.random()*5)];
+        return { name: ['Zeus','Faker','Chovy','Ruler','Keria','Doran','Canyon','Kiin'][Math.floor(Math.random()*8)],
+            pos: p, ovr: Math.floor(baseOvr + (Math.random()*6-3)), form: 0,
+            price: Math.floor(Math.pow(Math.max(baseOvr-60,1),1.8)*8)+100 };
+    });
+    renderMarket();
+}
+
+function renderMarket() {
+    document.getElementById('market-list').innerHTML = fa.map((p,i) => `
+        <div class="p-row" style="border-left-color:var(--gold);">
+            <span style="width:36px;font-weight:700;color:var(--muted);font-size:11px;">${p.pos}</span>
+            <span style="flex:1;font-weight:700;">${p.name}</span>
+            <span>${TIERS(p.ovr)}</span>
+            <button onclick="buyPlayer(${i})" style="padding:3px 8px;font-size:10px;margin-left:6px;">${p.price}G</button>
+        </div>`).join('');
+}
+
+function updateStandings() {
+    const sorted = [...allTeams].sort((a,b) => b.w - a.w || (b.sw-b.sl)-(a.sw-a.sl));
+    document.getElementById('standings-body').innerHTML = sorted.map((t,i) => {
+        const isMe = t.name === myTeam?.name;
+        const cut  = i === 7 ? 'cutline' : '';
+        return `<tr class="${isMe?'my-row':''} ${cut}">
+            <td>${i+1}</td>
+            <td style="text-align:left;padding-left:8px;font-weight:${isMe?'bold':'normal'}">${t.name}</td>
+            <td>${t.w}</td><td>${t.l}</td>
+            <td>${(t.sw||0)-(t.sl||0)}</td>
+            <td style="color:var(--gold);font-weight:bold;">${t.champPts===9999?'AQ':t.champPts||0}</td>
+        </tr>`;
+    }).join('');
+
+    const me = allTeams.find(t => t.name === myTeam?.name);
+    if (me) { myMoney = me.money ?? myMoney; }
+    updateHeader();
+}
+
+function updateHeader() {
+    document.getElementById('st-lv').textContent    = coachLv;
+    document.getElementById('st-year').textContent  = currentYear;
+    document.getElementById('st-split').textContent = currentSplit;
+    document.getElementById('st-week').textContent  = phase==='REG' ? currentWeek : '토너먼트';
+    document.getElementById('st-money').textContent = myMoney.toLocaleString();
+    document.getElementById('st-fatigue').textContent = Math.floor(myFatigue);
+    document.getElementById('st-fatigue').style.color = myFatigue>50?'var(--loss)':'var(--text)';
+    renderRoster();
+}
+
+function prepMatchTitle() {
+    document.getElementById('match-title').textContent = `${currentSplit} · WEEK ${currentWeek}`;
+    clearScore();
+    if (!schedule[currentWeek-1]) return;
+    const myMatch = schedule[currentWeek-1].find(([h,a]) => h===myTeam?.name||a===myTeam?.name);
+    if (myMatch) {
+        document.getElementById('h-name').textContent = myMatch[0];
+        document.getElementById('a-name').textContent = myMatch[1];
+    }
+}
+
+function clearScore() {
+    document.getElementById('h-score').textContent='0';
+    document.getElementById('a-score').textContent='0';
+    document.getElementById('h-dots').innerHTML='';
+    document.getElementById('a-dots').innerHTML='';
+}
+
+function setDots(id, wins, total) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for (let i=0; i<total; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot ' + (i < wins ? 'dot-w' : 'dot-l');
+        el.appendChild(d);
+    }
+}
+
+function addLog(msg, color='#cbd5e1') {
+    const log = document.getElementById('game-log');
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.style.borderColor = color;
+    div.style.color = color;
+    div.innerHTML = `> ${msg}`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function showRegularView() {
+    document.getElementById('regular-view').style.display='flex';
+    document.getElementById('tourney-board').style.display='none';
+    document.getElementById('standings-title').textContent = currentSplit + ' REGULAR SEASON';
+}
+
+function showTourneyBoard() {
+    document.getElementById('regular-view').style.display='none';
+    document.getElementById('tourney-board').style.display='block';
+}
+
+function renderTourney(log, title) {
+    showTourneyBoard();
+    let phases = {}, order = [];
+    log.forEach(r => {
+        if (!phases[r.phase]) { phases[r.phase] = []; order.push(r.phase); }
+        phases[r.phase].push(r);
+    });
+
+    const phaseGroups = {
+        'PI M1':'플레이인','PI M2':'플레이인','PI Win':'플레이인','PI Los':'플레이인','PI Final':'플레이인',
+        'PO 1R M1':'1R·2R','PO 1R M2':'1R·2R','PO 2R M1':'1R·2R','PO 2R M2':'1R·2R',
+        'W-Bracket':'파이널','L-Bracket':'파이널','Lower Final':'파이널','Grand Final':'파이널',
+        'QF1':'8강','QF2':'8강','QF3':'8강','QF4':'8강',
+        'SF1':'4강','SF2':'4강','Final':'결승'
+    };
+
+    let lastGroup = ''; let html = '';
+    order.forEach(ph => {
+        const grp = phaseGroups[ph] || ph;
+        if (grp !== lastGroup) { html += `<div class="t-phase">${grp.toUpperCase()}</div>`; lastGroup = grp; }
+        phases[ph].forEach(r => {
+            const wCls = ''; const lCls = 'elim';
+            html += `<div class="t-match">
+                <span style="color:var(--muted);min-width:110px;font-size:11px;">${ph}</span>
+                <span><b>${r.winner}</b> <span style="color:var(--gold);margin:0 8px;">${r.score}</span> <span class="${lCls}">${r.loser}</span></span>
+            </div>`;
+        });
+    });
+    document.getElementById('tourney-content').innerHTML = html;
+}
+
+function setMainBtn(txt, disabled) {
+    const btn = document.getElementById('main-btn');
+    btn.textContent = txt; btn.disabled = disabled;
+}
+
+function switchTab(tab) {
+    ['roster','planner','market','records'].forEach(t => {
+        document.getElementById(`tab-${t}`).style.display = t===tab?'block':'none';
+        const btn = document.getElementById(`tb-${t}`);
+        if (t===tab) btn.classList.add('tab-active'); else btn.classList.remove('tab-active');
+    });
+    if (tab==='records') renderHistory();
+}
+
+function renderHistory() {
+    document.getElementById('history-list').innerHTML = [...historyData].reverse().map(h =>
+        `<div class="rec-card">
+            <div style="color:var(--primary);font-weight:bold;margin-bottom:6px;">YEAR ${h.year}</div>
+            <div>🌍 월즈 우승: <span style="color:var(--gold);">${h.worldsChamp}</span></div>
+        </div>`
+    ).join('') || '<div style="color:var(--muted);font-size:13px;">아직 기록이 없습니다.</div>';
+}
+
+function popup(msg, color='var(--accent)') {
+    const el = document.getElementById('popup');
+    el.textContent = msg; el.style.color = color; el.style.display = 'block';
+    setTimeout(() => { el.style.display='none'; }, 3000);
+}
+</script>
 </body>
-
 </html>
