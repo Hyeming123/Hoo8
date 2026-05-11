@@ -304,10 +304,10 @@ function handle(msg) {
                     document.getElementById('a-dots').innerHTML = '';
                     document.getElementById('h-score').textContent = '0';
                     document.getElementById('a-score').textContent = '0';
+                    addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
                     addLog(`--- ${myMatch.home} vs ${myMatch.away} ---`, 'var(--gold)');
                     await animateSeries(myMatch.home, myMatch.away, myMatch.hw, myMatch.aw);
                 }
-                addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
                 updateStandings();
             })();
             break;
