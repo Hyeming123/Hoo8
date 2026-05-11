@@ -293,7 +293,6 @@ function handle(msg) {
             phase = 'REG';
             showRegularView();
             clearScore();
-            addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
             // 내 경기 먼저 애니메이션, 나머지는 텍스트로
             (async () => {
                 const myMatch = msg.results.find(r => r.home === myTeam.name || r.away === myTeam.name);
@@ -308,10 +307,7 @@ function handle(msg) {
                     addLog(`--- ${myMatch.home} vs ${myMatch.away} ---`, 'var(--gold)');
                     await animateSeries(myMatch.home, myMatch.away, myMatch.hw, myMatch.aw);
                 }
-                others.forEach(r => {
-                    const col = 'var(--muted)';
-                    addLog(`${r.home} ${r.hw}:${r.aw} ${r.away} → <b>${r.winner}</b>`, col);
-                });
+                addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
                 updateStandings();
             })();
             break;
