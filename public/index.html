@@ -316,6 +316,7 @@ function handle(msg) {
             currentWeek = msg.week;
             allTeams = msg.teams;
             submitted = false;
+            document.getElementById('game-log').innerHTML = ''; // ← 추가
             updateHeader();
             updateStandings();
             prepMatchTitle();
