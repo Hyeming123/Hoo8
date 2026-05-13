@@ -296,16 +296,8 @@ function handle(msg) {
             // 내 경기 먼저 애니메이션, 나머지는 텍스트로
             (async () => {
                 const myMatch = msg.results.find(r => r.home === myTeam.name || r.away === myTeam.name);
-                const others  = msg.results.filter(r => r !== myMatch);
                 if (myMatch) {
-                    document.getElementById('h-name').textContent = myMatch.home;
-                    document.getElementById('a-name').textContent = myMatch.away;
-                    document.getElementById('h-dots').innerHTML = '';
-                    document.getElementById('a-dots').innerHTML = '';
-                    document.getElementById('h-score').textContent = '0';
-                    document.getElementById('a-score').textContent = '0';
-                    addLog(`━━ WEEK ${msg.week} 결과 ━━`, 'var(--accent)');
-                    addLog(`--- ${myMatch.home} vs ${myMatch.away} ---`, 'var(--gold)');
+                    addLog(`━━ WEEK ${msg.week} MATCH RESULT ━━`, 'var(--accent)');
                     await animateSeries(myMatch.home, myMatch.away, myMatch.hw, myMatch.aw);
                 }
                 updateStandings();
